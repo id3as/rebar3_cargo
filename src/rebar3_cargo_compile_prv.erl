@@ -23,8 +23,10 @@ init(State) ->
             {module, ?MODULE},               % The module implementation of the task
             {bare, true},                    % The task can be run by the user, always true
             {deps, ?DEPS},                   % The list of dependencies
-            {example, "rebar3 rust build"},  % How to use the plugin
-            {opts, []},                      % list of options understood by the plugin
+            {example, "rebar3 cargo build"},  % How to use the plugin
+            {opts, [
+                {flat_output, $f, "flat_output", boolean, "Output libraries directly in priv/ instead of nested by version/mode"}
+            ]},                      % list of options understood by the plugin
             {short_desc, "Compile Rust crates"},
             {desc, "Compile Rust crates"}
     ]),
@@ -56,13 +58,21 @@ do(State) ->
 do_app(App, State) ->
     IsRelease = lists:member(prod, rebar_state:current_profiles(State)),
 
+    {Args, _} = rebar_state:command_parsed_args(State),
+    FlatOutput = case proplists:get_value(flat_output, Args) of
+        true -> true;
+        _ -> false
+    end,
+
+    rebar_api:debug("profiles are ~p, release=~p", [rebar_state:current_profiles(State), IsRelease]),
+
     Cargo = cargo:init(rebar_app_info:dir(App), #{ release => IsRelease }),
     Artifacts = cargo:build_and_capture(Cargo),
 
     NifLoadPaths =
     maps:fold(
         fun (_Id, Artifact, Map) ->
-            {Name, Path} = do_crate(Artifact, IsRelease, App),
+            {Name, Path} = do_crate(Artifact, IsRelease, FlatOutput, App),
             Map#{ Name => Path }
         end,
         #{},
@@ -82,7 +92,7 @@ do_app(App, State) ->
     rebar_app_info:opts(App, Opts1).
 
 
-do_crate(Artifact, IsRelease, App) ->
+do_crate(Artifact, IsRelease, FlatOutput, App) ->
     #{
         name := Name,
         version := Version,
@@ -97,13 +107,18 @@ do_crate(Artifact, IsRelease, App) ->
     end,
 
     PrivDir = rebar3_cargo_util:get_priv_dir(App),
-    OutDir = filename:join([PrivDir, Name, Version, Type]),
+    
     % TODO: Get "relative" path
     RelativeLoadPath = filename:join(["crates", Name, Version, Type]),
+    OutDir = case FlatOutput of
+                false -> filename:join([PrivDir, Name, Version, Type]);
+                true -> PrivDir
+             end,
 
     filelib:ensure_dir(filename:join([OutDir, "dummy"])),
 
     rebar_api:info("Copying artifacts for ~s ~s...", [Name, Version]),
+    rebar_api:debug("Files are ~p", [Files]),
     [NifLoadPath] = lists:filtermap(
         fun (F) ->
             case cp(F, OutDir) of
@@ -179,10 +194,15 @@ cp(Src, Dst) ->
 
     case cargo_util:check_extension(Ext, OsType) of
         true ->
-            rebar_api:info("  Copying ~s...", [Fname]),
+            Fname1 = case Fname of
+                        <<"lib", X/binary>> -> X;
+                        _ -> Fname
+                     end,
+            rebar_api:info("  Copying ~s as ~s...", [Fname, Fname1]),
+
             OutPath = filename:join([
                 Dst,
-                filename:basename(Src)
+                Fname1
             ]),
 
             {ok, _} = file:copy(Src, OutPath),
