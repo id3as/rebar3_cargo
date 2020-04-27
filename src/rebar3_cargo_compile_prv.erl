@@ -56,11 +56,13 @@ do(State) ->
 %% process for one application
 -spec do_app(rebar_app_info:t(), rebar_state:t()) -> rebar_app_info:t().
 do_app(App, State) ->
-    IsRelease = lists:member(prod, rebar_state:current_profiles(State)),
+    % IsRelease = lists:member(prod, rebar_state:current_profiles(State)),
+    IsRelease = true,
 
     {Args, _} = rebar_state:command_parsed_args(State),
     FlatOutput = case proplists:get_value(flat_output, Args) of
         true -> true;
+        undefined -> true; %% TODO defaulting this because I can't set in config because rebar3 half-asses plugins
         _ -> false
     end,
 
@@ -107,6 +109,8 @@ do_crate(Artifact, IsRelease, FlatOutput, App) ->
     end,
 
     PrivDir = rebar3_cargo_util:get_priv_dir(App),
+    rebar_api:info("Priv dir is ~s", [PrivDir]),
+
     
     % TODO: Get "relative" path
     RelativeLoadPath = filename:join(["crates", Name, Version, Type]),
@@ -206,6 +210,7 @@ cp(Src, Dst) ->
             ]),
 
             {ok, _} = file:copy(Src, OutPath),
+            rebar_api:info("  Output path ~s...", [OutPath]),
 
             ok;
         _ ->
