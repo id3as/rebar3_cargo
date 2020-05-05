@@ -69,7 +69,7 @@ do_app(App, State) ->
     rebar_api:debug("profiles are ~p, release=~p", [rebar_state:current_profiles(State), IsRelease]),
 
     Cargo = cargo:init(rebar_app_info:dir(App), #{ release => IsRelease }),
-    Artifacts = cargo:build_and_capture(Cargo),
+    Artifacts = cargo:build(Cargo),
 
     NifLoadPaths =
     maps:fold(
@@ -111,7 +111,7 @@ do_crate(Artifact, IsRelease, FlatOutput, App) ->
     PrivDir = rebar3_cargo_util:get_priv_dir(App),
     rebar_api:info("Priv dir is ~s", [PrivDir]),
 
-    
+
     % TODO: Get "relative" path
     RelativeLoadPath = filename:join(["crates", Name, Version, Type]),
     OutDir = case FlatOutput of
