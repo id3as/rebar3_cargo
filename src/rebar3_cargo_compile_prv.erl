@@ -94,6 +94,7 @@ do_app(App, State) ->
     rebar_app_info:opts(App, Opts1).
 
 
+
 do_crate(Artifact, IsRelease, FlatOutput, App) ->
     Name = cargo_artifact:name(Artifact),
     Version = cargo_artifact:version(Artifact),
@@ -108,7 +109,6 @@ do_crate(Artifact, IsRelease, FlatOutput, App) ->
 
     PrivDir = rebar3_cargo_util:get_priv_dir(App),
     rebar_api:info("Priv dir is ~s", [PrivDir]),
-
 
     % TODO: Get "relative" path
     RelativeLoadPath = filename:join(["crates", Name, Version, Type]),
@@ -126,7 +126,12 @@ do_crate(Artifact, IsRelease, FlatOutput, App) ->
             case cp(F, OutDir) of
                 ok ->
                     Filename = filename:basename(F),
-                    {true, filename:rootname(filename:join([RelativeLoadPath, Filename]))};
+                    case cargo_util:is_dylib(Filename) of
+                        true ->
+                            {true, filename:rootname(filename:join([RelativeLoadPath, Filename]))};
+                        false ->
+                            false
+                    end;
                 _ ->
                     false
             end
@@ -139,7 +144,7 @@ do_crate(Artifact, IsRelease, FlatOutput, App) ->
     {Name, NifLoadPath}.
 
 
--spec write_header(rebar_app_info:t(), #{ binary() => filename:type() }) -> ok.
+-spec write_header(rebar_app_info:t(), #{ binary() => file:filename_all() }) -> ok.
 write_header(App, NifLoadPaths) ->
     Define = "CRATES_HRL",
     FuncDefine = "FUNC_CRATES_HRL",
@@ -188,7 +193,7 @@ get_define(Name, Path) ->
     {d, D, binary_to_list(list_to_binary([Path]))}.
 
 
--spec cp(filename:type(), filename:type()) -> ok | {error, ignored}.
+-spec cp(file:filename_all(), file:name_all()) -> ok | {error, ignored}.
 cp(Src, Dst) ->
     Fname = filename:basename(Src),
 
