@@ -72,8 +72,8 @@ do_app(App, State) ->
     Artifacts = cargo:build(Cargo),
 
     NifLoadPaths =
-    maps:fold(
-        fun (_Id, Artifact, Map) ->
+    lists:foldl(
+        fun (Artifact, Map) ->
             {Name, Path} = do_crate(Artifact, IsRelease, FlatOutput, App),
             Map#{ Name => Path }
         end,
@@ -95,11 +95,9 @@ do_app(App, State) ->
 
 
 do_crate(Artifact, IsRelease, FlatOutput, App) ->
-    #{
-        name := Name,
-        version := Version,
-        filenames := Files
-    } = Artifact,
+    Name = cargo_artifact:name(Artifact),
+    Version = cargo_artifact:version(Artifact),
+    Files = cargo_artifact:filenames(Artifact),
 
     Type = case IsRelease of
         true ->
@@ -192,28 +190,13 @@ get_define(Name, Path) ->
 
 -spec cp(filename:type(), filename:type()) -> ok | {error, ignored}.
 cp(Src, Dst) ->
-    OsType = os:type(),
-    Ext = filename:extension(Src),
     Fname = filename:basename(Src),
 
-    case cargo_util:check_extension(Ext, OsType) of
-        true ->
-            Fname1 = case Fname of
-                        <<"lib", X/binary>> -> X;
-                        _ -> Fname
-                     end,
-            rebar_api:info("  Copying ~s as ~s...", [Fname, Fname1]),
+    rebar_api:info("  Copying ~s...", [Fname]),
+    OutPath = filename:join([
+        Dst,
+        filename:basename(Src)
+    ]),
 
-            OutPath = filename:join([
-                Dst,
-                Fname1
-            ]),
-
-            {ok, _} = file:copy(Src, OutPath),
-            rebar_api:info("  Output path ~s...", [OutPath]),
-
-            ok;
-        _ ->
-            rebar_api:debug("  Ignoring ~s", [Fname]),
-            {error, ignored}
-    end.
+    {ok, _} = file:copy(Src, OutPath),
+    ok.
