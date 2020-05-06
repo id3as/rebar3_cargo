@@ -197,11 +197,30 @@ get_define(Name, Path) ->
 cp(Src, Dst) ->
     Fname = filename:basename(Src),
 
-    rebar_api:info("  Copying ~s...", [Fname]),
-    OutPath = filename:join([
-        Dst,
-        filename:basename(Src)
-    ]),
+    case cargo_util:is_dylib(Src) of
+      true ->
+        Ext = filename:extension(Src),
+        Fname1 = case Fname of
+                   <<"lib", X/binary>> -> X;
+                   _ -> Fname
+                 end,
 
-    {ok, _} = file:copy(Src, OutPath),
-    ok.
+        Fname2 = case Ext of
+                   <<".dylib">> -> <<(filename:rootname(Fname1))/binary, ".so">>;
+                   _ -> Fname1
+                 end,
+
+        rebar_api:info("  Copying ~s as ~s...", [Fname, Fname2]),
+
+        OutPath = filename:join([
+                                 Dst,
+                                 Fname2
+                                ]),
+
+        {ok, _} = file:copy(Src, OutPath),
+        rebar_api:info("  Output path ~s", [OutPath]),
+        ok;
+      _ ->
+        rebar_api:debug("  Ignoring ~s", [Fname]),
+        {error, ignored}
+    end.
