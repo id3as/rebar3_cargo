@@ -74,8 +74,13 @@ do_app(App, State) ->
     NifLoadPaths =
     lists:foldl(
         fun (Artifact, Map) ->
-            {Name, Path} = do_crate(Artifact, IsRelease, FlatOutput, App),
-            Map#{ Name => Path }
+            case do_crate(Artifact, IsRelease, FlatOutput, App) of
+              {true, Name, Path} ->
+                Map#{ Name => Path };
+
+              false ->
+                Map
+            end
         end,
         #{},
         Artifacts
@@ -121,7 +126,7 @@ do_crate(Artifact, IsRelease, FlatOutput, App) ->
 
     rebar_api:info("Copying artifacts for ~s ~s...", [Name, Version]),
     rebar_api:debug("Files are ~p", [Files]),
-    [NifLoadPath] = lists:filtermap(
+    NifLoadPaths = lists:filtermap(
         fun (F) ->
             case cp(F, OutDir) of
                 ok ->
@@ -139,9 +144,14 @@ do_crate(Artifact, IsRelease, FlatOutput, App) ->
         Files
     ),
 
-    rebar_api:info("Load path ~s", [NifLoadPath]),
+    case NifLoadPaths of
+      [NifLoadPath] ->
+        rebar_api:info("Load path ~s", [NifLoadPath]),
+        {true, Name, NifLoadPath};
 
-    {Name, NifLoadPath}.
+      [] ->
+        false
+    end.
 
 
 -spec write_header(rebar_app_info:t(), #{ binary() => file:filename_all() }) -> ok.
