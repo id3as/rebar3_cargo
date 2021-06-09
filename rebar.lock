@@ -1,10 +1,12 @@
-{"1.1.0",
+{"1.2.0",
 [{<<"cargo">>,
-  {git,"https://github.com/id3as/erlang-cargo.git",
-       {ref,"e648ca79e887e8f6d8dd0d74cae69f45f79a0744"}},
+  {git,"https://github.com/rusterlium/erlang-cargo.git",
+       {ref,"f2a2ac09c7e34bdcbac9bd0c2ccb73d8b74e2490"}},
   0},
  {<<"jsx">>,{pkg,<<"jsx">>,<<"2.8.2">>},0}]}.
 [
 {pkg_hash,[
- {<<"jsx">>, <<"7ACC7D785B5ABE8A6E9ADBDE926A24E481F29956DD8B4DF49E3E4E7BCC92A018">>}]}
+ {<<"jsx">>, <<"7ACC7D785B5ABE8A6E9ADBDE926A24E481F29956DD8B4DF49E3E4E7BCC92A018">>}]},
+{pkg_hash_ext,[
+ {<<"jsx">>, <<"B4C5D3230B397C8D95579E4A3D72826BB6463160130CCF4182F5BE8579B5F44C">>}]}
 ].

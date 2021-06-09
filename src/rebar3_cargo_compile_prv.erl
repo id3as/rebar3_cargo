@@ -69,7 +69,7 @@ do_app(App, State) ->
     rebar_api:debug("profiles are ~p, release=~p", [rebar_state:current_profiles(State), IsRelease]),
 
     Cargo = cargo:init(rebar_app_info:dir(App), #{ release => IsRelease }),
-    Artifacts = cargo:build(Cargo),
+    Artifacts = cargo:build_all(Cargo),
 
     NifLoadPaths =
     lists:foldl(
